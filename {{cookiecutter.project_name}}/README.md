@@ -1,4 +1,4 @@
-# e2e-mlops-azure
+# e2e-mlops
 
 This repo is intended to demonstrate an end-to-end MLOps workflow on Databricks using Azure DevOps, where a model is deployed along with its ancillary pipelines to a specified (currently single) Databricks workspace.
 Each pipeline (e.g model training pipeline, model deployment pipeline) is deployed as a [Databricks job](https://docs.databricks.com/data-engineering/jobs/jobs.html), where these jobs are deployed to a Databricks workspace using Databricks Labs' [`dbx`](https://dbx.readthedocs.io/en/latest/index.html) tool. 
@@ -27,13 +27,12 @@ The following pipelines currently defined within the package are:
 The following outlines the workflow to demo the repo. This project is based on https://github.com/niall-turbitt/e2e-mlops-azure
 
 ### Set up
-1. Fork https://github.com/kivanc-databricks/e2e_mlops_demo
 1. Configure [Databricks CLI connection profile](https://docs.databricks.com/dev-tools/cli/index.html#connection-profiles)
     - The project is designed to use 3 different Databricks CLI connection profiles: dev, staging and prod. 
-      These profiles are set in [e2e-mlops-azure/.dbx/project.json](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/.dbx/project.json).
+      These profiles are set in [`.dbx/project.json](./.dbx/project.json).
     - Note that for demo purposes we use the same connection profile for each of the 3 environments. 
       **In practice each profile would correspond to separate dev, staging and prod Databricks workspaces.**
-    - This [project.json](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/.dbx/project.json) file will have to be 
+    - This [project.json](./.dbx/project.json) file will have to be 
       adjusted accordingly to the connection profiles a user has configured on their local machine.
 1. Configure Databricks the following variables for use in the Azure DevOps pipelines:
         - `STAGING_DATABRICKS_HOST`
@@ -53,17 +52,17 @@ The following outlines the workflow to demo the repo. This project is based on h
     - MLflow experiment
         - MLflow Experiments during model training and model deployment will be used in both the dev and prod environments. 
           The paths to these experiments are configured in their respective environment `.env` files. 
-          For example, the workspace paths to use for the production environment MLflow experiments will be defined under [`./conf/prod/.prod.env`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/conf/prod/.prod.env)    
+          For example, the workspace paths to use for the production environment MLflow experiments will be defined under [`./conf/prod/.prod.env`](./conf/prod/.prod.env)    
         - For demo purposes, we delete these experiments if they exist to begin from a blank slate.
     - Model Registry
         - Delete Model in MLflow Model Registry if exists.
     
     **NOTE:** As part of the `initial-model-train-register` multitask job, the first task `demo-setup` will delete these, 
-   as specified in [`demo_setup.yml`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/conf/pipeline_configs/demo_setup.yml).
+   as specified in [`demo_setup.yml`](./conf/pipeline_configs/demo_setup.yml).
 
 ### Workflow
 
-1. **Run `{{cookiecutter.project_slug}}-initial-model-train-register` multitask job**
+1. **Run `{{cookiecutter.project_name}}-initial-model-train-register` multitask job**
 
     - To demonstrate a CICD workflow, we want to start from a “steady state” where there is a current model in production. 
       As such, we will manually trigger a multitask job to do the following steps:
@@ -75,17 +74,17 @@ The following outlines the workflow to demo the repo. This project is based on h
 
     - Outlined below are the detailed steps to do this:
 
-        1. Run the multitask `{{cookiecutter.project_slug}}-initial-model-train-register` job via an automated job cluster 
+        1. Run the multitask `{{cookiecutter.project_name}}-initial-model-train-register` job via an automated job cluster 
            (NOTE: multitask jobs can only be run via `dbx deploy; dbx launch` currently).
            ```
-           dbx deploy --jobs=PROD-{{cookiecutter.project_slug}}-initial-model-train-register --environment=prod --files-only
-           dbx launch --job=PROD-{{cookiecutter.project_slug}}-initial-model-train-register --environment=prod --as-run-submit --trace
+           dbx deploy --jobs=PROD-{{cookiecutter.project_name}}-initial-model-train-register --environment=prod --files-only
+           dbx launch --job=PROD-{{cookiecutter.project_name}}-initial-model-train-register --environment=prod --as-run-submit --trace
            ```
            See the Limitations section below regarding running multitask jobs. In order to reduce cluster start up time
            you may want to consider using a [Databricks pool](https://docs.databricks.com/clusters/instance-pools/index.html), 
-           and specify this pool ID in [`conf/deployment.yml`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/conf/deployment.yml).
-    - `{{cookiecutter.project_slug}}-initial-model-train-register` tasks:
-        1. Demo setup task steps ([`demo-setup`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/{{cookiecutter.project_slug}}/pipelines/demo_setup_job.py))
+           and specify this pool ID in [`conf/deployment.yml`](./conf/deployment.yml).
+    - `{{cookiecutter.project_name}}-initial-model-train-register` tasks:
+        1. Demo setup task steps ([`demo-setup`](./pipelines/demo_setup_job.py))
             1. Delete Model Registry model if exists (archive any existing models).
             1. Delete MLflow experiment if exists.
             1. Delete Feature Table if exists.
@@ -103,8 +102,8 @@ The following outlines the workflow to demo the repo. This project is based on h
 
     - Create new “dev/new_model” branch 
         - `git checkout -b  dev/new_model`
-    - Make a change to the [`model_train.yml`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/conf/pipeline_configs/model_train.yml) config file, updating `max_depth` under model_params from 4 to 8
-        - Optional: change run name under mlflow params in [`model_train.yml`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/conf/pipeline_configs/model_train.yml) config file
+    - Make a change to the [`model_train.yml`](./conf/pipeline_configs/model_train.yml) config file, updating `max_depth` under model_params from 4 to 8
+        - Optional: change run name under mlflow params in [`model_train.yml`](./conf/pipeline_configs/model_train.yml) config file
     - Create pull request, to merge the branch dev/new_model into main
 
 * On pull request the following steps are triggered in Azure DevOps pipelines:
@@ -122,20 +121,20 @@ The following outlines the workflow to demo the repo. This project is based on h
 
     - On pushing this the following steps are executed as defined in `azure-pipelines.yml`:
         1. Trigger unit tests
-        1. Deploy `PROD-{{cookiecutter.project_slug}}-model-train` job to the production environment
-        1. Deploy `PROD-{{cookiecutter.project_slug}}-model-deployment` job to the production environment
-        1. Deploy `PROD-{{cookiecutter.project_slug}}-model-inference-batch` job to the production environment
+        1. Deploy `PROD-{{cookiecutter.project_name}}-model-train` job to the production environment
+        1. Deploy `PROD-{{cookiecutter.project_name}}-model-deployment` job to the production environment
+        1. Deploy `PROD-{{cookiecutter.project_name}}-model-inference-batch` job to the production environment
             - These jobs will now all be present in the specified workspace, and visible under the [Workflows](https://docs.databricks.com/data-engineering/jobs/index.html) tab.
     
 
-4. **Run `PROD-{{cookiecutter.project_slug}}-model-train` job**
+4. **Run `PROD-{{cookiecutter.project_name}}-model-train` job**
     - Manually trigger job via UI
-        - In the Databricks workspace go to `Workflows` > `Jobs`, where the `PROD-{{cookiecutter.project_slug}}-model-train` job will be present.
-        - Click into {{cookiecutter.project_slug}}-model-train and click ‘Run Now’. Doing so will trigger the job on the specified cluster configuration.
+        - In the Databricks workspace go to `Workflows` > `Jobs`, where the `PROD-{{cookiecutter.project_name}}-model-train` job will be present.
+        - Click into {{cookiecutter.project_name}}-model-train and click ‘Run Now’. Doing so will trigger the job on the specified cluster configuration.
     - Alternatively you can trigger the job using the Databricks CLI:
       - `databricks jobs run-now –job-id JOB_ID`
        
-    - Model train job steps (`PROD-{{cookiecutter.project_slug}}-model-train`)
+    - Model train job steps (`PROD-{{cookiecutter.project_name}}-model-train`)
         1. Train improved “new” classifier (RandomForestClassifier - `max_depth=8`)
         1. Register the model. Model version 2 will be registered to stage=None upon successful model training.
         1. **Manual Step**: MLflow Model Registry UI promotion to stage='Staging'
@@ -147,29 +146,29 @@ The following outlines the workflow to demo the repo. This project is based on h
     - Version 2 (Staging): RandomForestClassifier (`max_depth=8`)
 
 
-5. **Run `PROD-{{cookiecutter.project_slug}}-model-deployment` job (Continuous Deployment)**
+5. **Run `PROD-{{cookiecutter.project_name}}-model-deployment` job (Continuous Deployment)**
     - Manually trigger job via UI
-        - In the Databricks workspace go to `Workflows` > `Jobs`, where the `PROD-{{cookiecutter.project_slug}}-model-deployment` job will be present.
-        - Click into {{cookiecutter.project_slug}}-model-deployment and click ‘Run Now’. Doing so will trigger the job on the specified cluster configuration. 
+        - In the Databricks workspace go to `Workflows` > `Jobs`, where the `PROD-{{cookiecutter.project_name}}-model-deployment` job will be present.
+        - Click into {{cookiecutter.project_name}}-model-deployment and click ‘Run Now’. Doing so will trigger the job on the specified cluster configuration. 
     - Alternatively you can trigger the job using the Databricks CLI:
       - `databricks jobs run-now –job-id JOB_ID`
     
-    - Model deployment job steps  (`PROD-{{cookiecutter.project_slug}}-model-deployment`)
+    - Model deployment job steps  (`PROD-{{cookiecutter.project_name}}-model-deployment`)
         1. Compare new “candidate model” in `stage='Staging'` versus current Production model in `stage='Production'`.
-        1. Comparison criteria set through [`model_deployment.yml`](https://github.com/niall-turbitt/e2e-mlops-azure/blob/main/conf/pipeline_configs/model_deployment.yml)
+        1. Comparison criteria set through [`model_deployment.yml`](./conf/pipeline_configs/model_deployment.yml)
             1. Compute predictions using both models against a specified reference dataset
             1. If Staging model performs better than Production model, promote Staging model to Production and archive existing Production model
             1. If Staging model performs worse than Production model, archive Staging model
             
 
-6. **Run `PROD-{{cookiecutter.project_slug}}-model-inference-batch` job** 
+6. **Run `PROD-{{cookiecutter.project_name}}-model-inference-batch` job** 
     - Manually trigger job via UI
-        - In the Databricks workspace go to `Workflows` > `Jobs`, where the `PROD-{{cookiecutter.project_slug}}-model-inference-batch` job will be present.
-        - Click into {{cookiecutter.project_slug}}-model-inference-batch and click ‘Run Now’. Doing so will trigger the job on the specified cluster configuration.
+        - In the Databricks workspace go to `Workflows` > `Jobs`, where the `PROD-{{cookiecutter.project_name}}-model-inference-batch` job will be present.
+        - Click into {{cookiecutter.project_name}}-model-inference-batch and click ‘Run Now’. Doing so will trigger the job on the specified cluster configuration.
     - Alternatively you can trigger the job using the Databricks CLI:
       - `databricks jobs run-now –job-id JOB_ID`
 
-    - Batch model inference steps  (`PROD-{{cookiecutter.project_slug}}-model-inference-batch`)
+    - Batch model inference steps  (`PROD-{{cookiecutter.project_name}}-model-inference-batch`)
         1. Load model from stage=Production in Model Registry
             - **NOTE:** model must have been logged to MLflow using the Feature Store API
         1. Use primary keys in specified inference input data to load features from feature store

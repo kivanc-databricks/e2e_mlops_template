@@ -46,14 +46,14 @@ stages:
       displayName: 'Run Unit tests'
 
     - bash: |
-        dbx deploy --deployment-file conf/deployment.yml --jobs=STAGING-{{cookiecutter.project_slug}}-sample-integration-test --files-only --environment=staging
+        dbx deploy --deployment-file conf/deployment.yml --jobs=STAGING-{{cookiecutter.project_name}}-sample-integration-test --files-only --environment=staging
       env:
         DATABRICKS_HOST: $(STAGING_DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(STAGING_DATABRICKS_TOKEN)
       displayName: 'Deploy integration test to staging env'
 
     - script: |
-        dbx launch --job=STAGING-{{cookiecutter.project_slug}}-sample-integration-test --as-run-submit --trace --environment=staging
+        dbx launch --job=STAGING-{{cookiecutter.project_name}}-sample-integration-test --as-run-submit --trace --environment=staging
       env:
         DATABRICKS_HOST: $(STAGING_DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(STAGING_DATABRICKS_TOKEN)
@@ -102,32 +102,32 @@ stages:
       displayName: 'Run Unit tests'
 
     - bash: |
-        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-initial-model-train-register --environment=prod
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_name}}-initial-model-train-register --environment=prod
       env:
         DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
-      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-initial-model-train-register job [prod environment]'
+      displayName: 'Deploy PROD-{{cookiecutter.project_name}}-initial-model-train-register job [prod environment]'
 
     - bash: |
-        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-model-train --environment=prod
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_name}}-model-train --environment=prod
       env:
         DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
-      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-model-train job [prod environment]'
+      displayName: 'Deploy PROD-{{cookiecutter.project_name}}-model-train job [prod environment]'
 
     - bash: |
-        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-model-deployment --environment=prod
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_name}}-model-deployment --environment=prod
       env:
         DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
-      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-model-deployment job [prod environment]'
+      displayName: 'Deploy PROD-{{cookiecutter.project_name}}-model-deployment job [prod environment]'
 
     - bash: |
-        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-model-inference-batch --environment=prod
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_name}}-model-inference-batch --environment=prod
       env:
         DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
         DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
-      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-model-inference-batch job [prod environment]'
+      displayName: 'Deploy PROD-{{cookiecutter.project_name}}-model-inference-batch job [prod environment]'
 
     - task: PublishTestResults@2
       condition: succeededOrFailed()
