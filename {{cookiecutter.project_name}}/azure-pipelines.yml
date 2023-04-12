@@ -1,0 +1,137 @@
+variables:
+  - group: 'DatabricksVariables'
+
+trigger:
+  branches:
+    include:
+    - '*'
+  tags:
+    include:
+    - '*'
+
+stages:
+- stage: onPush
+  condition: |
+    and(
+      not(startsWith(variables['Build.SourceBranch'], 'refs/heads/releases')),
+      not(startsWith(variables['Build.SourceBranch'], 'refs/heads/main')),
+      not(startsWith(variables['Build.SourceBranch'], 'refs/tags/v'))
+    )
+  jobs:
+  - job: onPushJob
+    pool:
+      vmImage: 'ubuntu-20.04'
+    steps:
+    - script: env | sort
+      displayName: 'Environment / Context'
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.9'
+      inputs:
+        versionSpec: 3.9
+
+    - checkout: self
+      persistCredentials: true
+      clean: true
+      displayName: 'Checkout & Build.Reason: $(Build.Reason) & Build.SourceBranchName: $(BRANCH_NAME)'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r unit-requirements.txt
+        pip install -e .
+      displayName: 'Install dependencies'
+
+    - script: |
+        pytest tests/unit --junitxml=test-unit.xml
+      displayName: 'Run Unit tests'
+
+    - bash: |
+        dbx deploy --deployment-file conf/deployment.yml --jobs=STAGING-{{cookiecutter.project_slug}}-sample-integration-test --files-only --environment=staging
+      env:
+        DATABRICKS_HOST: $(STAGING_DATABRICKS_HOST)
+        DATABRICKS_TOKEN: $(STAGING_DATABRICKS_TOKEN)
+      displayName: 'Deploy integration test to staging env'
+
+    - script: |
+        dbx launch --job=STAGING-{{cookiecutter.project_slug}}-sample-integration-test --as-run-submit --trace --environment=staging
+      env:
+        DATABRICKS_HOST: $(STAGING_DATABRICKS_HOST)
+        DATABRICKS_TOKEN: $(STAGING_DATABRICKS_TOKEN)
+      displayName: 'Launch integration test in staging env'
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test-*.xml'
+        failTaskOnFailedTests: true
+
+- stage: onRelease
+  condition: |
+    or(
+      startsWith(variables['Build.SourceBranch'], 'refs/heads/releases'),
+      startsWith(variables['Build.SourceBranch'], 'refs/tags/v')
+    )
+  jobs:
+  - job: onReleaseJob
+    pool:
+      vmImage: 'ubuntu-20.04'
+
+    steps:
+    - script: env | sort
+      displayName: 'Environment / Context'
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.9'
+      inputs:
+        versionSpec: 3.9
+
+    - checkout: self
+      persistCredentials: true
+      clean: true
+      displayName: 'Checkout & Build.Reason: $(Build.Reason) & Build.SourceBranchName: $(BRANCH_NAME)'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r unit-requirements.txt
+        pip install -e .
+      displayName: 'Install dependencies'
+
+    - script: |
+        pytest tests/unit --junitxml=test-unit.xml
+      displayName: 'Run Unit tests'
+
+    - bash: |
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-initial-model-train-register --environment=prod
+      env:
+        DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
+        DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
+      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-initial-model-train-register job [prod environment]'
+
+    - bash: |
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-model-train --environment=prod
+      env:
+        DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
+        DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
+      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-model-train job [prod environment]'
+
+    - bash: |
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-model-deployment --environment=prod
+      env:
+        DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
+        DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
+      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-model-deployment job [prod environment]'
+
+    - bash: |
+        dbx deploy --deployment-file conf/deployment.yml --jobs=PROD-{{cookiecutter.project_slug}}-model-inference-batch --environment=prod
+      env:
+        DATABRICKS_HOST: $(PROD_DATABRICKS_HOST)
+        DATABRICKS_TOKEN: $(PROD_DATABRICKS_TOKEN)
+      displayName: 'Deploy PROD-{{cookiecutter.project_slug}}-model-inference-batch job [prod environment]'
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test-*.xml'
+        failTaskOnFailedTests: true

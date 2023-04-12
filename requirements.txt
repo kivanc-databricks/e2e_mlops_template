@@ -1,0 +1,16 @@
+setuptools
+wheel
+cookiecutter
+pathlib
+pytest
+path
+python-dotenv
+pygithub
+requests
+pynacl
+click
+databricks-cli
+pyspark==3.0.0
+pytest-cov
+dbx
+python-dotenv==0.20.0
